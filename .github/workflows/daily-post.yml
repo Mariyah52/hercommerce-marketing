@@ -1,0 +1,57 @@
+name: Daily HerCommerce post
+
+on:
+  schedule:
+    # 13:00 UTC = 6pm Pakistan Standard Time (UTC+5) — adjust the hour below if you'd
+    # rather post at a different time of day. Cron is always in UTC.
+    - cron: '0 13 * * *'
+  workflow_dispatch:
+    inputs:
+      manual_override_business_id:
+        description: 'Firestore business ID to force-feature today (leave blank for auto-pick)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write # needed to push generated media to the `media` branch (see src/post/hostMedia.mjs)
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install edge-tts (free text-to-speech, no API key)
+        run: pip install --break-system-packages edge-tts
+
+      - name: Run today's post
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          META_ACCESS_TOKEN: ${{ secrets.META_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
+          MANUAL_OVERRIDE_BUSINESS_ID: ${{ github.event.inputs.manual_override_business_id }}
+        run: npm run run
+
+      - name: Upload generated content as a workflow artifact (for debugging)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-content-${{ github.run_id }}
+          path: output/
+          retention-days: 14

@@ -40,6 +40,9 @@ export async function postInstagramImage(imageUrl, content) {
     caption: captionWithHashtags(content),
     access_token: accessToken,
   })
+  // Give Instagram a moment to finish downloading/processing the image before publishing —
+  // publishing immediately can fail with "Media ID is not available" (error_subcode 2207027).
+  await waitForContainerReady(container.id, accessToken)
   return graphPost(`${igUserId}/media_publish`, { creation_id: container.id, access_token: accessToken })
 }
 
@@ -50,6 +53,7 @@ export async function postInstagramCarousel(imageUrls, content) {
   const children = []
   for (const imageUrl of imageUrls) {
     const item = await graphPost(`${igUserId}/media`, { image_url: imageUrl, is_carousel_item: 'true', access_token: accessToken })
+    await waitForContainerReady(item.id, accessToken)
     children.push(item.id)
   }
   const container = await graphPost(`${igUserId}/media`, {
@@ -58,6 +62,7 @@ export async function postInstagramCarousel(imageUrls, content) {
     caption: captionWithHashtags(content),
     access_token: accessToken,
   })
+  await waitForContainerReady(container.id, accessToken)
   return graphPost(`${igUserId}/media_publish`, { creation_id: container.id, access_token: accessToken })
 }
 

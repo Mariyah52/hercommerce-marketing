@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: {{WIDTH}}px; height: {{HEIGHT}}px; overflow: hidden; }
+  body {
+    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    background: {{BACKGROUND}};
+    position: relative;
+    color: #ffffff;
+  }
+  .bg-photo {
+    position: absolute; inset: 0;
+    background-image: {{BG_IMAGE_CSS}};
+    background-size: cover;
+    background-position: center;
+    opacity: {{BG_IMAGE_OPACITY}};
+  }
+  .scrim {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+  }
+  .brand {
+    position: absolute; top: 64px; left: 64px;
+    font-size: 34px; font-weight: 700; letter-spacing: 0.5px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: #ffffff; }
+  .content {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 0 90px;
+  }
+  .content.center { align-items: center; text-align: center; }
+  .slide-text {
+    font-size: {{FONT_SIZE}}px;
+    font-weight: 700;
+    line-height: 1.32;
+    text-shadow: 0 2px 18px rgba(0,0,0,0.35);
+    max-width: 920px;
+    white-space: pre-wrap;
+  }
+  .footer {
+    position: absolute; bottom: 70px; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center; gap: 26px;
+  }
+  .dots { display: flex; gap: 12px; }
+  .pdot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.4); }
+  .pdot.active { background: #ffffff; width: 34px; border-radius: 8px; }
+  .cta {
+    font-size: 30px; font-weight: 600; opacity: 0.95;
+    display: {{CTA_DISPLAY}};
+  }
+</style>
+</head>
+<body>
+  <div class="bg-photo"></div>
+  <div class="scrim"></div>
+  <div class="brand"><span class="dot"></span>HerCommerce</div>
+  <div class="content {{ALIGN_CLASS}}">
+    <div class="slide-text">{{SLIDE_TEXT}}</div>
+  </div>
+  <div class="footer">
+    <div class="dots">{{DOTS_HTML}}</div>
+    <div class="cta">👉 Link in bio</div>
+  </div>
+</body>
+</html>

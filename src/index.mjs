@@ -69,12 +69,19 @@ async function main() {
   const publicUrls = await hostMediaPublicly(localFiles, { dateFolder: content.date })
   console.log('Hosted publicly:', publicUrls)
 
+  // GitHub's raw.githubusercontent.com CDN needs a little time to start serving a file right
+  // after it's pushed — fetching it too soon (which Instagram/Facebook do immediately) can fail
+  // with "Media download has failed... could not be fetched from this URI" even though the file
+  // is really there. A short wait here avoids that race.
+  console.log('Waiting 45s for GitHub to finish propagating the uploaded media...')
+  await new Promise((r) => setTimeout(r, 45000))
+
   // Facebook Page posting is best-effort: this Meta app's Instagram-login product doesn't
   // carry the classic `pages_manage_posts` permission, so a direct Page post can fail with
   // a permissions error even though Instagram publishing succeeds. Rather than fail the whole
-  // run over that, we try it and log a warning on failure — Instagram's own "Share to
-  // Facebook" cross-post setting (already turned on) means every Instagram post still
-  // reaches the Facebook Page automatically, no extra permission needed.
+  // run over that, we try it and log a warning on failure — turn on Instagram's own
+  // "Share to Facebook" toggle (Settings > Sharing to other apps) so every Instagram post
+  // still reaches the Facebook Page automatically, no extra permission needed.
   async function tryFacebookPost(fn, ...args) {
     try {
       await fn(...args)

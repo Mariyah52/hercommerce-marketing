@@ -69,19 +69,33 @@ async function main() {
   const publicUrls = await hostMediaPublicly(localFiles, { dateFolder: content.date })
   console.log('Hosted publicly:', publicUrls)
 
+  // Facebook Page posting is best-effort: this Meta app's Instagram-login product doesn't
+  // carry the classic `pages_manage_posts` permission, so a direct Page post can fail with
+  // a permissions error even though Instagram publishing succeeds. Rather than fail the whole
+  // run over that, we try it and log a warning on failure — Instagram's own "Share to
+  // Facebook" cross-post setting (already turned on) means every Instagram post still
+  // reaches the Facebook Page automatically, no extra permission needed.
+  async function tryFacebookPost(fn, ...args) {
+    try {
+      await fn(...args)
+    } catch (err) {
+      console.warn('Facebook Page post skipped (falling back to Instagram\'s own cross-post):', err.message)
+    }
+  }
+
   if (content.format === 'carousel') {
     await postInstagramCarousel(publicUrls, content)
-    await postFacebookPagePhoto(publicUrls[0], content) // FB post uses the cover slide
+    await tryFacebookPost(postFacebookPagePhoto, publicUrls[0], content) // FB post uses the cover slide
   } else if (content.format === 'post') {
     await postInstagramImage(publicUrls[0], content)
-    await postFacebookPagePhoto(publicUrls[0], content)
+    await tryFacebookPost(postFacebookPagePhoto, publicUrls[0], content)
   } else if (content.format === 'reel') {
     await postInstagramReel(publicUrls[0], content)
-    await postFacebookPageVideo(publicUrls[0], content)
+    await tryFacebookPost(postFacebookPageVideo, publicUrls[0], content)
     await queueTikTokDraft(publicUrls[0], content)
   }
 
-  console.log('Done — posted to Instagram + Facebook; TikTok queued for approval.')
+  console.log('Done — posted to Instagram (Facebook Page post attempted best-effort); TikTok queued for approval.')
 }
 
 main().catch((err) => {

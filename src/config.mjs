@@ -32,3 +32,8 @@ export const ROTATION = {
 // (manual pick from the dashboard, suggested by product-count activity) becomes part
 // of the rotation — see src/content/spotlight.mjs.
 export const SPOTLIGHT_UNLOCK_STORE_COUNT = 40
+
+// Stores that should never be auto-featured (name match, case-insensitive) — e.g. a
+// business that asked not to be included. Add a name here any time a store opts out;
+// no code change needed beyond this list. Checked in src/content/pick.mjs.
+export const EXCLUDED_BUSINESS_NAMES = ['HOMIQ']

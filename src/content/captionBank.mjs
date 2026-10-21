@@ -5,7 +5,8 @@
 // mod array length), so nothing repeats for several weeks straight.
 //
 // Voice: Roman Urdu / English mix, warm, women-empowerment, casual-but-credible —
-// matching HerCommerce's established brand voice.
+// matching HerCommerce's established brand voice. (Reel `voiceover` lines are written in
+// actual Urdu script instead — see src/reel/build.mjs for why.)
 
 const HASHTAGS_CORE = '#HerCommerce #WomenEntrepreneurs #OnlineBusinessPakistan #SmallBusinessPakistan #EcommercePakistan #SupportWomenOwnedBusiness #ShopLocalPakistan #StartYourJourney'
 
@@ -69,9 +70,9 @@ export const CAPTION_BANK = {
       caption: 'Online business hai... but sales nahi aa rahi? Her-Commerce try karo. 💗\n\n👉 Link in bio',
       onScreenText: ['Online business hai...', 'but sales nahi aa rahi? 😩', 'Her-Commerce try karo 💗', 'Your business, your growth.'],
       voiceover: [
-        'Online business hai... but sales nahi aa rahi?',
-        'Her-Commerce se apna business easily manage karo.',
-        'Products showcase karo, customers tak pohoncho, aur grow karo.',
+        'آن لائن بزنس ہے… لیکن سیلز نہیں آ رہیں؟',
+        'ہر کامرس سے اپنا بزنس آسانی سے منیج کریں۔',
+        'پراڈکٹس دکھائیں، کسٹمرز تک پہنچیں، اور آگے بڑھیں۔',
       ],
       hashtags: HASHTAGS_CORE,
     },
@@ -79,9 +80,9 @@ export const CAPTION_BANK = {
       caption: 'Orders track karne ke liye Excel sheets aur alag alag WhatsApp chats? Ab nahi. 📦\n\n👉 Link in bio',
       onScreenText: ['Orders bikhar gaye hain?', 'Sab kuch ek jagah manage karo 📦', 'HerCommerce free mein try karo'],
       voiceover: [
-        'Orders yaad rakhna, customers ko reply karna, sab kuch bikhar jaata hai na?',
-        'HerCommerce pe sab ek hi jagah — products, orders, customers.',
-        'Ek app, poora business.',
+        'آرڈرز یاد رکھنا، کسٹمرز کو جواب دینا، سب کچھ بکھر جاتا ہے نا؟',
+        'ہر کامرس پر سب ایک ہی جگہ — پراڈکٹس، آرڈرز، کسٹمرز۔',
+        'ایک ایپ، پورا بزنس۔',
       ],
       hashtags: HASHTAGS_CORE,
     },
@@ -89,9 +90,29 @@ export const CAPTION_BANK = {
       caption: 'Apna website banwane ke liye paise nahi hain? Aapko zaroorat hi nahi. 🆓\n\n👉 Link in bio',
       onScreenText: ['Website banwane ke paise nahi?', "Zaroorat hi nahi 🆓", 'HerCommerce pe free store banao'],
       voiceover: [
-        'Lagta hai online store banwane ke liye bara budget chahiye?',
-        'HerCommerce pe apna professional store bilkul free mein banta hai.',
-        'Bas apne products daalo aur bechna shuru karo.',
+        'لگتا ہے آن لائن اسٹور بنوانے کے لیے بڑا بجٹ چاہیے؟',
+        'ہر کامرس پر اپنا پروفیشنل اسٹور بالکل فری میں بنتا ہے۔',
+        'بس اپنی پراڈکٹس ڈالیں اور بیچنا شروع کریں۔',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'DMs mein order, comments mein order, WhatsApp pe order — sab alag jagah? Sambhalna mushkil hai. 😵‍💫\n\n👉 Link in bio',
+      onScreenText: ['Orders har jagah bikhre hain?', 'DMs, comments, WhatsApp — sab alag 😵‍💫', 'HerCommerce pe sab ek jagah'],
+      voiceover: [
+        'ڈی ایمز میں آرڈر، کمنٹس میں آرڈر، واٹس ایپ پر آرڈر — سب الگ جگہ سے سنبھالنا مشکل ہے نا؟',
+        'ہر کامرس پر آپ کا پورا اسٹور ایک ہی لنک پر ہوتا ہے۔',
+        'کسٹمر آرڈر کرتا ہے، آپ آسانی سے منیج کرتی ہیں۔',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'Stock khatam ho gaya aur pata hi nahi chala? Customer ko bata na parhe, isse pehle fix karo. 📦\n\n👉 Link in bio',
+      onScreenText: ['Stock khatam, pata hi nahi chala?', 'Customer ko mana karna padta hai 😩', 'HerCommerce pe stock track karo'],
+      voiceover: [
+        'اسٹاک ختم ہو جاتا ہے اور پتا ہی نہیں چلتا، پھر کسٹمر کو منع کرنا پڑتا ہے؟',
+        'ہر کامرس پر اپنا اسٹاک لائیو ٹریک کریں۔',
+        'جو بھی بچے، وہی دکھے — کوئی کنفیوژن نہیں۔',
       ],
       hashtags: HASHTAGS_CORE,
     },
@@ -166,13 +187,33 @@ export const CAPTION_BANK = {
     {
       caption: 'Products showcase karo, customers tak pohoncho, aur grow karo. 📈\n\n👉 Link in bio',
       onScreenText: ['New Order! 🎉', 'A customer just placed an order', 'Her-Commerce — your business, your growth'],
-      voiceover: ['Products showcase karo, customers tak pohoncho, aur grow karo.', 'Her-Commerce — your business, your growth.'],
+      voiceover: ['پراڈکٹس دکھائیں، کسٹمرز تک پہنچیں، اور آگے بڑھیں۔', 'ہر کامرس — آپ کا بزنس، آپ کی ترقی۔'],
       hashtags: HASHTAGS_CORE,
     },
     {
       caption: 'Apna store customize karo — apna brand, apna style. 🎨\n\n👉 Link in bio',
       onScreenText: ['Apna brand, apna style 🎨', 'HerCommerce pe store customize karo', 'Colors, layout — sab aapki marzi'],
-      voiceover: ['Apna store bilkul apne brand jaisa banao.', 'Colors, layout, sab kuch customize karo.', 'Bilkul free, bilkul aasan.'],
+      voiceover: ['اپنا اسٹور بالکل اپنے برانڈ جیسا بنائیں۔', 'رنگ، لے آؤٹ، سب کچھ کسٹمائز کریں۔', 'بالکل فری، بالکل آسان۔'],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'Achi photos, clear pricing, easy checkout — bas itna chahiye customer ko order karne ke liye. ✨\n\n👉 Link in bio',
+      onScreenText: ['Customer order kab karta hai? ✨', 'Achi photos + clear pricing', 'HerCommerce pe dono asaan hain'],
+      voiceover: [
+        'کسٹمر آرڈر تب کرتا ہے جب تصویریں اچھی ہوں اور قیمت واضح ہو۔',
+        'ہر کامرس پر اپنا کیٹلاگ پروفیشنل دکھائیں۔',
+        'آسان چیک آؤٹ، زیادہ آرڈرز۔',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'Naye customers tak pohonchna mushkil lagta hai? Apna store link sahi jagah share karo aur dekho farq. 🚀\n\n👉 Link in bio',
+      onScreenText: ['Naye customers tak kaise pohonchein? 🚀', 'Apna link sahi jagah share karo', 'HerCommerce — your business, your growth'],
+      voiceover: [
+        'نئے کسٹمرز تک پہنچنا مشکل لگتا ہے؟',
+        'اپنا ہر کامرس لنک انسٹاگرام، واٹس ایپ، ہر جگہ شیئر کریں۔',
+        'جتنا شیئر، اتنی ترقی۔',
+      ],
       hashtags: HASHTAGS_CORE,
     },
   ],
@@ -202,11 +243,23 @@ export const CAPTION_BANK = {
     {
       caption:
         "This week's spotlight: {{storeName}} 💗 — {{category}} ka khoobsurat collection. {{ownerName}} ki mehnat aur creativity ko salute. Check out their store: {{link}}\n\n👉 Apna bhi store banao — link in bio",
+      onScreenText: ["This week's spotlight 💗", '{{storeName}}', '{{category}} ka khoobsurat collection'],
+      voiceover: [
+        'اس ہفتے کا اسپاٹ لائٹ ہے {{storeName}}۔',
+        '{{ownerName}} کی محنت اور تخلیقی صلاحیت کو سلیوٹ۔',
+        'ان کا اسٹور چیک کریں، لنک بائیو میں ہے۔',
+      ],
       hashtags: HASHTAGS_CORE,
     },
     {
       caption:
         "Meet {{ownerName}}, the woman behind {{storeName}} 💗 — {{category}} mein apna naam bana rahi hain. Support karein: {{link}}",
+      onScreenText: ['Meet {{ownerName}} 💗', 'the woman behind {{storeName}}', '{{category}} mein apna naam bana rahi hain'],
+      voiceover: [
+        'ملیے {{ownerName}} سے، جو {{storeName}} کے پیچھے ہیں۔',
+        '{{category}} میں اپنا نام بنا رہی ہیں۔',
+        'انہیں سپورٹ کریں — لنک بائیو میں ہے۔',
+      ],
       hashtags: HASHTAGS_CORE,
     },
   ],

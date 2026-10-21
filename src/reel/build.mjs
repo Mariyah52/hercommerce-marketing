@@ -20,8 +20,17 @@ const execFileAsync = promisify(execFile)
 const SCENE_SECONDS = 3.2 // how long each on-screen-text scene holds, before voiceover-driven trimming
 
 /** Runs edge-tts to synthesize one line of voiceover to an mp3. Free, no API key —
- *  Microsoft's public neural TTS. 'ur-PK-UzmaNeural' and 'ur-PK-AsadNeural' are the
- *  two Urdu (Pakistan) voices available; Uzma (female) matches HerCommerce's voice. */
+ *  Microsoft's public neural TTS. 'ur-PK-UzmaNeural' is the Urdu (Pakistan) female voice —
+ *  Maria wants the reel voiceover to actually be spoken Urdu, not a Roman-Urdu-text-read-
+ *  by-an-English-voice workaround.
+ *
+ *  IMPORTANT: this voice needs real Urdu/Nastaliq SCRIPT text (اردو), not Roman Urdu
+ *  (Urdu spelled out in Latin letters, e.g. "Online business hai..."). Feeding it Roman
+ *  Urdu is what made early reels sound garbled/like an unclear language — the voice tried
+ *  to pronounce Latin letters using Urdu letter-by-letter rules. So captionBank.mjs's
+ *  `voiceover` arrays are written in actual Urdu script; only the on-screen text
+ *  (`onScreenText`, shown visually, not spoken) stays in Roman Urdu/English, since that's
+ *  how HerCommerce's captions are normally written and read on screen. */
 async function synthesizeVoiceoverLine(text, outPath, voice = 'ur-PK-UzmaNeural') {
   await execFileAsync('edge-tts', ['--voice', voice, '--text', text, '--write-media', outPath])
 }

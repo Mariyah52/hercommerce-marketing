@@ -2,7 +2,7 @@
 // which caption-bank template (cycling so nothing repeats for weeks), and which real
 // store data fills the {{placeholders}}. This is the one place "today's content" gets
 // assembled into a single plain object that the carousel/reel/post modules consume.
-import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT } from '../config.mjs'
+import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT, EXCLUDED_BUSINESS_NAMES } from '../config.mjs'
 import { CAPTION_BANK } from './captionBank.mjs'
 import { getActiveBusinesses, getCategories, getProductCountsByBusiness, getProductImages } from '../data/firestore.mjs'
 
@@ -57,19 +57,28 @@ function categoryLabel(business, categoriesById) {
  * @param {Object} [opts.manualOverride] — { businessId } to force-feature a specific
  *   store today instead of the auto-picked one (the "manual content" option Maria asked
  *   for — wired up from the approval dashboard).
+ * @param {'post'|'carousel'|'reel'} [opts.forceFormat] — testing-only override to force
+ *   today's post to a specific format regardless of what day it is (e.g. to manually
+ *   test carousel/reel posting without waiting for their scheduled day). Picks whichever
+ *   rotation theme already uses that format, so the caption bank still matches correctly.
  */
 export async function pickTodaysContent(opts = {}) {
   const now = opts.now ?? new Date()
   const dayOfWeek = now.getDay()
-  const slot = ROTATION[dayOfWeek]
-  if (!slot) return null // Sunday — off
+  const slot = opts.forceFormat
+    ? Object.values(ROTATION).find((s) => s && s.format === opts.forceFormat) ?? ROTATION[dayOfWeek]
+    : ROTATION[dayOfWeek]
+  if (!slot) return null // Sunday — off (only possible when not forcing a format)
 
   const week = isoWeekNumber(now)
-  const [businesses, categoriesById, productCounts] = await Promise.all([
+  const [allBusinesses, categoriesById, productCounts] = await Promise.all([
     getActiveBusinesses(),
     getCategories(),
     getProductCountsByBusiness(),
   ])
+  // Never auto-feature a store that opted out — see config.EXCLUDED_BUSINESS_NAMES.
+  const excludedNames = new Set(EXCLUDED_BUSINESS_NAMES.map((n) => n.toLowerCase()))
+  const businesses = allBusinesses.filter((b) => !excludedNames.has((b.name ?? '').toLowerCase()))
 
   // Spotlight override: once there are enough stores, and it's Friday (feature day),
   // swap in the store_spotlight theme roughly once a week instead of the generic
@@ -78,7 +87,7 @@ export async function pickTodaysContent(opts = {}) {
   let format = slot.format
   const spotlightReady = businesses.length >= SPOTLIGHT_UNLOCK_STORE_COUNT
   const isSpotlightDay = dayOfWeek === 5 // Friday
-  if (opts.manualOverride || (spotlightReady && isSpotlightDay)) {
+  if (!opts.forceFormat && (opts.manualOverride || (spotlightReady && isSpotlightDay))) {
     theme = 'store_spotlight'
     format = 'reel'
   }

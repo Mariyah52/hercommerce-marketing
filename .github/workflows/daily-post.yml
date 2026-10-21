@@ -11,6 +11,16 @@ on:
         description: 'Firestore business ID to force-feature today (leave blank for auto-pick)'
         required: false
         default: ''
+      force_format:
+        description: 'Force today''s format for testing (leave as auto to use the normal day-based rotation)'
+        required: false
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - post
+          - carousel
+          - reel
 
 permissions:
   contents: write # needed to push generated media to the `media` branch (see src/post/hostMedia.mjs)
@@ -46,6 +56,7 @@ jobs:
           FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
           TIKTOK_ACCESS_TOKEN: ${{ secrets.TIKTOK_ACCESS_TOKEN }}
           MANUAL_OVERRIDE_BUSINESS_ID: ${{ github.event.inputs.manual_override_business_id }}
+          FORCE_FORMAT: ${{ github.event.inputs.force_format }}
         run: npm run run
 
       - name: Upload generated content as a workflow artifact (for debugging)

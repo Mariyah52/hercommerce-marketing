@@ -35,8 +35,14 @@ async function main() {
   const manualOverride = process.env.MANUAL_OVERRIDE_BUSINESS_ID
     ? { businessId: process.env.MANUAL_OVERRIDE_BUSINESS_ID }
     : undefined
+  // Testing-only: force today's format to 'post'/'carousel'/'reel' via the workflow's
+  // manual "Run workflow" dropdown, so each format can be test-posted on demand instead
+  // of waiting for its scheduled day.
+  const forceFormat = ['post', 'carousel', 'reel'].includes(process.env.FORCE_FORMAT)
+    ? process.env.FORCE_FORMAT
+    : undefined
 
-  const content = await pickTodaysContent({ manualOverride })
+  const content = await pickTodaysContent({ manualOverride, forceFormat })
   if (!content) {
     console.log('Off day (Sunday) — nothing to post.')
     return

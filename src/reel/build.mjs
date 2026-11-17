@@ -3,56 +3,95 @@
 // "scenes" rendered the same way as the carousel slides (Playwright), background music
 // (optional, from assets/music/), and ffmpeg assembling it all into one MP4.
 //
-// NOTE: edge-tts's backend (speech.platform.bing.com) and this needs ffmpeg — both work
-// fine on a GitHub Actions runner's unrestricted network; the Cowork sandbox this repo
-// was built in blocks the TTS backend, so full end-to-end reel generation can only be
-// smoke-tested on Actions, not here. The Playwright scene-rendering half of this file
-// reuses carousel/render.mjs and IS fully testable locally (see src/reel/build.mjs test
-// block at the bottom).
+// Voice fixes (see voice.mjs for the reasoning):
+//  - Urdu text is spoken by the Urdu voice, Latin text (store/owner names) by an English
+//    voice, instead of the Urdu voice garbling Latin letters.
+//  - Every line is retried if edge-tts hiccups, normalised to one audio format (the old
+//    `-c copy` mp3 concat could click/skip), separated by a short natural pause, and the
+//    final track is loudness-normalised so the voice is clear on phones.
+//  - On-screen scenes are timed from each line's real duration, so text and speech match.
+//  - The music bed no longer halves the voiceover volume (amix used to attenuate it).
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { mkdir, readdir, rm } from 'node:fs/promises'
+import { mkdir, rm, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { renderSlides } from '../carousel/render.mjs'
+import { URDU_VOICE, ENGLISH_VOICE, splitByScript, allocateSceneDurations } from './voice.mjs'
 
 const execFileAsync = promisify(execFile)
 
-const SCENE_SECONDS = 3.2 // how long each on-screen-text scene holds, before voiceover-driven trimming
+const SCENE_SECONDS = 3.2 // fallback hold time when a reel has no voiceover
+const LINE_GAP_SECONDS = 0.35 // natural pause after every spoken line
+const TAIL_SECONDS = 0.8 // lets the last word finish before the reel ends
+const TTS_RETRIES = 3
+const SPEECH_RATE = '-6%' // a touch slower than default — clearer for Urdu on phone speakers
 
-/** Runs edge-tts to synthesize one line of voiceover to an mp3. Free, no API key —
- *  Microsoft's public neural TTS. 'ur-PK-UzmaNeural' is the Urdu (Pakistan) female voice —
- *  Maria wants the reel voiceover to actually be spoken Urdu, not a Roman-Urdu-text-read-
- *  by-an-English-voice workaround.
- *
- *  IMPORTANT: this voice needs real Urdu/Nastaliq SCRIPT text (اردو), not Roman Urdu
- *  (Urdu spelled out in Latin letters, e.g. "Online business hai..."). Feeding it Roman
- *  Urdu is what made early reels sound garbled/like an unclear language — the voice tried
- *  to pronounce Latin letters using Urdu letter-by-letter rules. So captionBank.mjs's
- *  `voiceover` arrays are written in actual Urdu script; only the on-screen text
- *  (`onScreenText`, shown visually, not spoken) stays in Roman Urdu/English, since that's
- *  how HerCommerce's captions are normally written and read on screen. */
-async function synthesizeVoiceoverLine(text, outPath, voice = 'ur-PK-UzmaNeural') {
-  await execFileAsync('edge-tts', ['--voice', voice, '--text', text, '--write-media', outPath])
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
+
+/** One edge-tts call (free Microsoft neural TTS, no API key), retried on transient failures. */
+export async function synthesizeWithEdgeTts(text, voice, outPath) {
+  let lastErr
+  for (let attempt = 1; attempt <= TTS_RETRIES; attempt++) {
+    try {
+      await execFileAsync('edge-tts', ['--voice', voice, `--rate=${SPEECH_RATE}`, '--text', text, '--write-media', outPath])
+      return
+    } catch (err) {
+      lastErr = err
+      await sleep(1500 * attempt)
+    }
+  }
+  throw new Error(`edge-tts failed after ${TTS_RETRIES} attempts for voice ${voice}: ${lastErr?.message ?? lastErr}`)
 }
 
-/** Concatenates several mp3 voiceover lines into one track with ffmpeg, returning its
- *  duration in seconds (used to size the video to match). */
-async function concatAudio(mp3Paths, outPath) {
-  const listFile = outPath + '.txt'
-  const { writeFile } = await import('node:fs/promises')
-  await writeFile(listFile, mp3Paths.map((p) => `file '${p}'`).join('\n'))
-  await execFileAsync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outPath])
+async function ffprobeDuration(file) {
   const { stdout } = await execFileAsync('ffprobe', [
-    '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', outPath,
+    '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', file,
   ])
   return parseFloat(stdout.trim())
 }
 
-/** Renders each on-screen-text line as a 1080x1920 scene PNG (reusing the carousel
- *  template's visual language at Reels' aspect ratio instead of the feed's 4:5). */
+/** Writes an ffmpeg concat list file and joins same-format wavs losslessly. */
+async function concatWavs(wavPaths, outPath) {
+  const listFile = outPath + '.txt'
+  await writeFile(listFile, wavPaths.map((p) => `file '${p}'`).join('\n'))
+  await execFileAsync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outPath])
+}
+
+/** Converts any audio file to the one canonical format (44.1kHz mono 16-bit wav). */
+async function toCanonicalWav(input, outPath, { padSeconds = 0 } = {}) {
+  const filters = padSeconds > 0 ? ['-af', `apad=pad_dur=${padSeconds}`] : []
+  await execFileAsync('ffmpeg', ['-y', '-i', input, ...filters, '-ar', '44100', '-ac', '1', '-c:a', 'pcm_s16le', outPath])
+}
+
+/**
+ * Voices one line: Urdu runs with the Urdu voice, Latin runs with the English voice,
+ * joined into a single wav followed by a short pause.
+ * @returns {Promise<{path: string, duration: number}>}
+ */
+export async function voiceLine(text, index, workDir, synthesize) {
+  const segments = splitByScript(text)
+  if (segments.length === 0) throw new Error(`Voiceover line ${index + 1} has nothing speakable: "${text}"`)
+  const segWavs = []
+  for (let s = 0; s < segments.length; s++) {
+    const seg = segments[s]
+    const mp3 = path.join(workDir, `vo-${index + 1}-${s + 1}.mp3`)
+    await synthesize(seg.text, seg.lang === 'en' ? ENGLISH_VOICE : URDU_VOICE, mp3)
+    const wav = path.join(workDir, `vo-${index + 1}-${s + 1}.wav`)
+    await toCanonicalWav(mp3, wav)
+    segWavs.push(wav)
+  }
+  const joined = path.join(workDir, `vo-${index + 1}-joined.wav`)
+  if (segWavs.length === 1) await toCanonicalWav(segWavs[0], joined, { padSeconds: LINE_GAP_SECONDS })
+  else {
+    const raw = path.join(workDir, `vo-${index + 1}-raw.wav`)
+    await concatWavs(segWavs, raw)
+    await toCanonicalWav(raw, joined, { padSeconds: LINE_GAP_SECONDS })
+  }
+  return { path: joined, duration: await ffprobeDuration(joined) }
+}
+
+/** Renders each on-screen-text line as a 1080x1920 scene PNG. */
 async function renderScenes(onScreenText, images, outDir) {
-  // renderSlides is written for 1080x1350; Reels need 1080x1920. We render through the
-  // same template logic but at Reels' size by passing a taller viewport via opts.
   return renderSlides(onScreenText, { outDir, prefix: 'scene', images, centered: true, reelAspect: true })
 }
 
@@ -63,35 +102,49 @@ async function renderScenes(onScreenText, images, outDir) {
  * @param {Object} [opts]
  * @param {string} [opts.outDir] — defaults to ./output/reels
  * @param {string} [opts.musicPath] — optional background music file to duck under the voiceover
+ * @param {Function} [opts.synthesize] — (text, voice, outPath) => Promise; defaults to edge-tts
+ *   (injectable so tests can run without network access)
+ * @param {Function} [opts.renderScenes] — injectable scene renderer for tests
  * @returns {Promise<string>} path to the finished MP4
  */
 export async function buildReel(content, opts = {}) {
   const outDir = opts.outDir ?? path.join(process.cwd(), 'output', 'reels')
   const workDir = path.join(outDir, `_work-${content.date ?? Date.now()}`)
   await mkdir(workDir, { recursive: true })
+  const synthesize = opts.synthesize ?? synthesizeWithEdgeTts
 
-  // 1. Voiceover — one mp3 per line, concatenated.
-  const voiceoverLines = content.voiceover ?? []
-  const mp3Paths = []
-  for (let i = 0; i < voiceoverLines.length; i++) {
-    const p = path.join(workDir, `vo-${i + 1}.mp3`)
-    await synthesizeVoiceoverLine(voiceoverLines[i], p)
-    mp3Paths.push(p)
+  // 1. Voiceover — one wav per line (with its own pause), joined and loudness-normalised.
+  const voiceoverLines = (content.voiceover ?? []).filter((l) => l && l.trim())
+  const lines = []
+  for (let i = 0; i < voiceoverLines.length; i++) lines.push(await voiceLine(voiceoverLines[i], i, workDir, synthesize))
+  const lineDurations = lines.map((l) => l.duration)
+
+  let voiceoverPath = null
+  let voiceoverDuration = 0
+  if (lines.length) {
+    const joined = path.join(workDir, 'voiceover-raw.wav')
+    await concatWavs(lines.map((l) => l.path), joined)
+    voiceoverPath = path.join(workDir, 'voiceover.wav')
+    // Consistent, phone-friendly loudness (-16 LUFS is the usual social-video target).
+    await execFileAsync('ffmpeg', ['-y', '-i', joined, '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '44100', '-ac', '1', voiceoverPath])
+    voiceoverDuration = await ffprobeDuration(voiceoverPath)
   }
-  const voiceoverPath = path.join(workDir, 'voiceover.mp3')
-  const voiceoverDuration = mp3Paths.length ? await concatAudio(mp3Paths, voiceoverPath) : 0
 
-  // 2. Scenes — on-screen text cards, timed to split the voiceover's total duration
-  //    evenly (falls back to SCENE_SECONDS each if there's no voiceover timing yet).
+  // 2. Scenes — on-screen text, each held exactly as long as its spoken line(s).
   const scenes = content.onScreenText ?? []
-  const scenePaths = await renderScenes(scenes, content.images ?? [], workDir)
-  const perSceneSeconds = voiceoverDuration > 0 ? voiceoverDuration / scenes.length : SCENE_SECONDS
+  const scenePaths = await (opts.renderScenes ?? renderScenes)(scenes, content.images ?? [], workDir)
+  const sceneDurations = voiceoverPath
+    ? allocateSceneDurations(lineDurations, scenes.length)
+    : scenes.map(() => SCENE_SECONDS)
+  // Loudnorm can shift length by a few ms; keep video >= audio and add a tail for the last word.
+  sceneDurations[sceneDurations.length - 1] += TAIL_SECONDS
 
-  // 3. Assemble: each scene PNG held for perSceneSeconds, concatenated into a silent
-  //    video track, then the voiceover (and optional ducked music) muxed in.
+  // 3. Assemble: scene PNGs held for their own durations → silent video → mux audio.
   const concatListPath = path.join(workDir, 'scenes.txt')
-  const { writeFile } = await import('node:fs/promises')
-  await writeFile(concatListPath, scenePaths.map((p) => `file '${p}'\nduration ${perSceneSeconds}`).join('\n') + `\nfile '${scenePaths.at(-1)}'\n`)
+  await writeFile(
+    concatListPath,
+    scenePaths.map((p, i) => `file '${p}'\nduration ${sceneDurations[i].toFixed(3)}`).join('\n') + `\nfile '${scenePaths.at(-1)}'\n`,
+  )
 
   const silentVideoPath = path.join(workDir, 'silent.mp4')
   await execFileAsync('ffmpeg', [
@@ -101,20 +154,20 @@ export async function buildReel(content, opts = {}) {
 
   await mkdir(outDir, { recursive: true })
   const outPath = path.join(outDir, `reel-${content.date ?? 'draft'}.mp4`)
-  const audioInputs = []
-  if (voiceoverDuration > 0) audioInputs.push('-i', voiceoverPath)
-  if (opts.musicPath) audioInputs.push('-i', opts.musicPath)
+  const aac = ['-c:a', 'aac', '-b:a', '192k', '-ar', '44100', '-movflags', '+faststart']
 
-  if (audioInputs.length === 0) {
-    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-c', 'copy', outPath])
+  if (!voiceoverPath) {
+    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-c', 'copy', '-movflags', '+faststart', outPath])
   } else if (!opts.musicPath) {
-    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-i', voiceoverPath, '-c:v', 'copy', '-c:a', 'aac', '-shortest', outPath])
+    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-i', voiceoverPath, '-c:v', 'copy', ...aac, '-shortest', outPath])
   } else {
-    // Voiceover at full volume, music ducked under it (-15dB) and looped/trimmed to length.
+    // Voice at full level, music bed at ~12%. amix halves every input, so the mix is
+    // doubled back up (previously the voiceover came out at half volume whenever music was on).
     await execFileAsync('ffmpeg', [
       '-y', '-i', silentVideoPath, '-i', voiceoverPath, '-stream_loop', '-1', '-i', opts.musicPath,
-      '-filter_complex', '[2:a]volume=0.18[music];[1:a][music]amix=inputs=2:duration=first[aout]',
-      '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-shortest', outPath,
+      '-filter_complex',
+      '[2:a]volume=0.12[music];[1:a][music]amix=inputs=2:duration=first:dropout_transition=0,volume=2,alimiter=limit=0.95[aout]',
+      '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', ...aac, '-shortest', outPath,
     ])
   }
 
@@ -123,8 +176,7 @@ export async function buildReel(content, opts = {}) {
 }
 
 // Local smoke test — only exercises the Playwright scene-rendering half (no TTS/ffmpeg
-// network calls needed), so it runs inside the Cowork sandbox to catch template bugs
-// before relying on GitHub Actions for the full audio+video pipeline.
+// network calls needed). Full pipeline tests with a fake TTS: `npm test`.
 if (import.meta.url === `file://${process.argv[1]}`) {
   const scenes = ['Online business hai...', 'but sales nahi aa rahi? 😩', 'Her-Commerce try karo 💗']
   const paths = await renderScenes(scenes, [], path.join(process.cwd(), 'output', 'reel-scene-test'))

@@ -6,7 +6,7 @@
   "description": "HerCommerce Automation Bot \u2014 daily content engine + poster for Instagram, Facebook and TikTok",
   "scripts": {
     "run": "node src/index.mjs",
-    "test": "node --test tests/voice.test.mjs"
+    "test": "node --test tests/voice.test.mjs tests/pick.test.mjs"
   },
   "dependencies": {
     "firebase": "^11.0.0",

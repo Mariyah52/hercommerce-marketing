@@ -58,3 +58,66 @@ test('buildVoiceover: right voice per part, pauses, retry on failure, tail silen
   assert.ok(!calls.some((c) => c.voice === 'ur-PK-UzmaNeural' && /[A-Za-z]/.test(c.text)), 'Urdu voice never receives Latin letters')
   await rm(work, { recursive: true, force: true })
 })
+
+const { CAPTION_BANK } = await import('../src/content/captionBank.mjs')
+const { storeHashtag, storeInstagramMention, buildCreditLine } = await import('../src/content/pick.mjs')
+
+test('every reel voiceover line is Roman Urdu/English only (Neerja cannot read Urdu script)', () => {
+  let count = 0
+  for (const templates of Object.values(CAPTION_BANK)) {
+    for (const t of templates) {
+      for (const line of t.voiceover ?? []) {
+        count++
+        assert.ok(!/[؀-ۿ]/.test(line), `Urdu script found in: ${line}`)
+        assert.ok(!/Her-Commerce|HerCommerce/.test(line), `brand must be written "Her Commerce": ${line}`)
+      }
+    }
+  }
+  assert.ok(count >= 30)
+})
+
+test('store hashtag, Instagram mention and credit line', () => {
+  assert.equal(storeHashtag('Rose Boutique'), '#RoseBoutique')
+  assert.equal(storeHashtag('عائشہ اسٹور'), '')
+  assert.equal(storeInstagramMention({ instagram: 'https://www.instagram.com/rose.boutique/?hl=en' }), '@rose.boutique')
+  assert.equal(storeInstagramMention({ instagramHandle: '@rose_b' }), '@rose_b')
+  assert.equal(storeInstagramMention({}), '')
+  const line = buildCreditLine({ name: 'Rose Boutique', instagram: 'rose_b' }, 'https://hercommerce-299ba.web.app/store/rose')
+  assert.ok(line.includes('Rose Boutique') && line.includes('@rose_b') && line.includes('/store/rose'))
+  assert.equal(buildCreditLine(null, 'x'), '')
+})
+
+test('collab invite is sent, and a rejected collab never stops the post', async () => {
+  process.env.IG_BUSINESS_ACCOUNT_ID = '123'
+  process.env.META_ACCESS_TOKEN = 'tok'
+  const { postInstagramImage } = await import('../src/post/meta.mjs')
+  const calls = []
+  const realFetch = globalThis.fetch
+  globalThis.fetch = async (url, init) => {
+    const u = String(url)
+    if (u.includes('status_code')) return { ok: true, json: async () => ({ status_code: 'FINISHED' }) }
+    const body = Object.fromEntries(new URLSearchParams(init?.body ?? ''))
+    calls.push({ path: u.split('/v21.0/')[1], body })
+    if (u.endsWith('/123/media') && body.collaborators === '["bad.handle"]') {
+      return { ok: false, json: async () => ({ error: { message: 'Invalid collaborator' } }) }
+    }
+    return { ok: true, json: async () => ({ id: 'c1' }) }
+  }
+  try {
+    await postInstagramImage('https://x/y.png', { caption: 'hi', hashtags: '#a', creditLine: '', collaborators: ['rose.boutique'] })
+    assert.equal(calls[0].body.collaborators, '["rose.boutique"]')
+    calls.length = 0
+    await postInstagramImage('https://x/y.png', { caption: 'hi', hashtags: '#a', creditLine: '', collaborators: ['bad.handle'] })
+    const media = calls.filter((c) => c.path === '123/media')
+    assert.equal(media.length, 2, 'retried once without collaborators')
+    assert.equal(media[1].body.collaborators, undefined)
+    assert.ok(calls.some((c) => c.path === '123/media_publish'), 'still published')
+  } finally {
+    globalThis.fetch = realFetch
+  }
+})
+
+test('WhatsApp-group templates exist and need the group link', () => {
+  const withGroup = Object.values(CAPTION_BANK).flat().filter((tpl) => JSON.stringify(tpl).includes('{{groupLink}}'))
+  assert.ok(withGroup.length >= 2)
+})

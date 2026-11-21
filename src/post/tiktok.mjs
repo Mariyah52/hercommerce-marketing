@@ -21,7 +21,7 @@ function requireEnv(name) {
  */
 export async function queueTikTokDraft(videoUrl, content) {
   const accessToken = requireEnv('TIKTOK_ACCESS_TOKEN')
-  const caption = `${content.caption}\n\n${content.hashtags ?? ''}`.trim().slice(0, 2200)
+  const caption = [content.caption, content.creditLine, content.hashtags].filter(Boolean).join('\n\n').trim().slice(0, 2200)
 
   const res = await fetch(`${TIKTOK_API_BASE}/post/publish/content/init/`, {
     method: 'POST',

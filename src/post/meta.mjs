@@ -28,18 +28,34 @@ async function graphPost(path, params) {
 }
 
 function captionWithHashtags(content) {
-  return `${content.caption}\n\n${content.hashtags ?? ''}`.trim()
+  return [content.caption, content.creditLine, content.hashtags].filter(Boolean).join('\n\n').trim()
+}
+
+/** Creates an Instagram media container. If the post has collaborators (the featured
+ *  store's Instagram handle) they are invited as Instagram Collab partners. A wrong or
+ *  private handle must never stop the daily post, so if Instagram rejects the request
+ *  because of the collaborators we post again without them. */
+async function createContainer(igUserId, params, content) {
+  const collaborators = content.collaborators ?? []
+  if (collaborators.length > 0) {
+    try {
+      return await graphPost(`${igUserId}/media`, { ...params, collaborators: JSON.stringify(collaborators.slice(0, 3)) })
+    } catch (err) {
+      console.warn(`Collab invite to ${collaborators.join(', ')} was rejected — posting without it:`, err.message)
+    }
+  }
+  return graphPost(`${igUserId}/media`, params)
 }
 
 /** Publishes a single-image Instagram feed post. `imageUrl` must be a public URL. */
 export async function postInstagramImage(imageUrl, content) {
   const igUserId = requireEnv('IG_BUSINESS_ACCOUNT_ID')
   const accessToken = requireEnv('META_ACCESS_TOKEN')
-  const container = await graphPost(`${igUserId}/media`, {
+  const container = await createContainer(igUserId, {
     image_url: imageUrl,
     caption: captionWithHashtags(content),
     access_token: accessToken,
-  })
+  }, content)
   // Give Instagram a moment to finish downloading/processing the image before publishing —
   // publishing immediately can fail with "Media ID is not available" (error_subcode 2207027).
   await waitForContainerReady(container.id, accessToken)
@@ -56,12 +72,12 @@ export async function postInstagramCarousel(imageUrls, content) {
     await waitForContainerReady(item.id, accessToken)
     children.push(item.id)
   }
-  const container = await graphPost(`${igUserId}/media`, {
+  const container = await createContainer(igUserId, {
     media_type: 'CAROUSEL',
     children: children.join(','),
     caption: captionWithHashtags(content),
     access_token: accessToken,
-  })
+  }, content)
   await waitForContainerReady(container.id, accessToken)
   return graphPost(`${igUserId}/media_publish`, { creation_id: container.id, access_token: accessToken })
 }
@@ -70,12 +86,12 @@ export async function postInstagramCarousel(imageUrls, content) {
 export async function postInstagramReel(videoUrl, content) {
   const igUserId = requireEnv('IG_BUSINESS_ACCOUNT_ID')
   const accessToken = requireEnv('META_ACCESS_TOKEN')
-  const container = await graphPost(`${igUserId}/media`, {
+  const container = await createContainer(igUserId, {
     media_type: 'REELS',
     video_url: videoUrl,
     caption: captionWithHashtags(content),
     access_token: accessToken,
-  })
+  }, content)
   // Video containers need a moment to finish processing server-side before publish.
   await waitForContainerReady(container.id, accessToken)
   return graphPost(`${igUserId}/media_publish`, { creation_id: container.id, access_token: accessToken })

@@ -2,7 +2,7 @@
 // which caption-bank template (cycling so nothing repeats for weeks), and which real
 // store data fills the {{placeholders}}. This is the one place "today's content" gets
 // assembled into a single plain object that the carousel/reel/post modules consume.
-import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT, EXCLUDED_BUSINESS_NAMES } from '../config.mjs'
+import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT, EXCLUDED_BUSINESS_NAMES, WHATSAPP_GROUP_URL, COLLAB_ENABLED } from '../config.mjs'
 import { CAPTION_BANK } from './captionBank.mjs'
 import { getActiveBusinesses, getCategories, getProductCountsByBusiness, getProductImages } from '../data/firestore.mjs'
 
@@ -23,6 +23,35 @@ function fillPlaceholders(text, data) {
 
 function storefrontLink(business) {
   return `${STOREFRONT_BASE_URL}/${business.slug ?? business.id}`
+}
+
+/** "Rose Boutique" -> "#RoseBoutique". Hashtags can only hold letters/digits, so names with
+ *  no English letters (or too short) get no store hashtag. */
+export function storeHashtag(name) {
+  const words = String(name ?? '').match(/[A-Za-z0-9]+/g)
+  if (!words) return ''
+  const tag = words.map((w) => w[0].toUpperCase() + w.slice(1)).join('')
+  return tag.length >= 3 ? '#' + tag : ''
+}
+
+/** The store's own Instagram handle, if its profile has one (checked under a few likely
+ *  field names). Returns "@handle" or ''. */
+export function storeInstagramMention(business) {
+  const raw = business?.instagram ?? business?.instagramHandle ?? business?.instagramUsername ?? business?.socialLinks?.instagram ?? business?.socials?.instagram ?? ''
+  const handle = String(raw).trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, '')
+  return /^[A-Za-z0-9._]{1,30}$/.test(handle) ? '@' + handle : ''
+}
+
+/** Credit line added under the caption whenever a store's product photos are shown:
+ *  names the store, links to ITS storefront, and mentions it so the post markets that
+ *  store too. (Instagram does not make links in captions clickable — the link is there to
+ *  copy; Facebook captions make it clickable — which is why the store hashtag/mention
+ *  are added as well: those ARE clickable on Instagram.) */
+export function buildCreditLine(business, link) {
+  if (!business) return ''
+  const mention = storeInstagramMention(business)
+  const name = business.name ?? 'this store'
+  return `📸 Featured store: ${name}${mention ? ' ' + mention : ''}\n🛍️ ${link}`
 }
 
 /** Picks a business to feature today, cycling through all active businesses so the same
@@ -50,6 +79,7 @@ function categoryLabel(business, categoriesById) {
  *     voiceover?: string[],           // reel only
  *     images: string[],               // real product photos to use, when available
  *     link: string,                   // the featured store's storefront URL
+ *     creditLine: string,             // '📸 Featured store … 🛍️ link' (empty when no store photos used)
  *     business: {...} | null }        // the real business record behind this post, if any
  *
  * @param {Object} [opts]
@@ -92,7 +122,8 @@ export async function pickTodaysContent(opts = {}) {
     format = 'reel'
   }
 
-  const templates = CAPTION_BANK[theme]
+  // Templates that mention the WhatsApp group are only used once its link is set in config.
+  const templates = CAPTION_BANK[theme].filter((tpl) => WHATSAPP_GROUP_URL || !JSON.stringify(tpl).includes('{{groupLink}}'))
   const template = templates[week % templates.length]
 
   // Pick the featured business: manual override wins, otherwise cycle deterministically
@@ -105,7 +136,11 @@ export async function pickTodaysContent(opts = {}) {
     const ranked = [...businesses].sort((a, b) => (productCounts.get(b.id) ?? 0) - (productCounts.get(a.id) ?? 0))
     business = pickBusiness(ranked.slice(0, 5), week)
   } else if (businesses.length > 0) {
-    business = pickBusiness(businesses, week + dayOfWeek)
+    // Every other post features a store that has a valid Instagram handle, so those stores
+    // get a collab invite regularly; the remaining posts cycle through all stores.
+    const withHandle = businesses.filter((b) => storeInstagramMention(b))
+    const offset = week + dayOfWeek
+    business = withHandle.length > 0 && offset % 2 === 0 ? pickBusiness(withHandle, Math.floor(offset / 2)) : pickBusiness(businesses, offset)
   }
 
   const images = business ? await getProductImages(business.id, 5) : []
@@ -116,17 +151,25 @@ export async function pickTodaysContent(opts = {}) {
         ownerName: business.ownerName ?? 'the owner',
         category: categoryLabel(business, categoriesById),
         link,
+        groupLink: WHATSAPP_GROUP_URL,
       }
-    : { storeName: 'HerCommerce', ownerName: '', category: '', link }
+    : { storeName: 'HerCommerce', ownerName: '', category: '', link, groupLink: WHATSAPP_GROUP_URL }
 
   const caption = fillPlaceholders(template.caption, placeholderData)
+  // Whenever this store's own photos are used, credit it: name + its link + its hashtag.
+  const showCredit = business && images.length > 0
+  const creditLine = showCredit ? buildCreditLine(business, link) : ''
+  const extraTag = showCredit ? storeHashtag(business.name) : ''
   const result = {
     date: now.toISOString().slice(0, 10),
     dayName: now.toLocaleDateString('en-US', { weekday: 'long' }),
     format,
     theme,
     caption,
-    hashtags: template.hashtags,
+    hashtags: [template.hashtags, extraTag].filter(Boolean).join(' '),
+    creditLine,
+    // Instagram handles (no @) to invite as collaborators on this post.
+    collaborators: showCredit && COLLAB_ENABLED ? [storeInstagramMention(business).replace(/^@/, '')].filter(Boolean) : [],
     images,
     link,
     business,

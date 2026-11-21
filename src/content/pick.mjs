@@ -25,6 +25,35 @@ function storefrontLink(business) {
   return `${STOREFRONT_BASE_URL}/${business.slug ?? business.id}`
 }
 
+/** "Rose Boutique" -> "#RoseBoutique". Hashtags can only hold letters/digits, so names with
+ *  no English letters (or too short) get no store hashtag. */
+export function storeHashtag(name) {
+  const words = String(name ?? '').match(/[A-Za-z0-9]+/g)
+  if (!words) return ''
+  const tag = words.map((w) => w[0].toUpperCase() + w.slice(1)).join('')
+  return tag.length >= 3 ? '#' + tag : ''
+}
+
+/** The store's own Instagram handle, if its profile has one (checked under a few likely
+ *  field names). Returns "@handle" or ''. */
+export function storeInstagramMention(business) {
+  const raw = business?.instagram ?? business?.instagramHandle ?? business?.instagramUsername ?? business?.socialLinks?.instagram ?? business?.socials?.instagram ?? ''
+  const handle = String(raw).trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/^@/, '').replace(/[/?#].*$/, '')
+  return /^[A-Za-z0-9._]{1,30}$/.test(handle) ? '@' + handle : ''
+}
+
+/** Credit line added under the caption whenever a store's product photos are shown:
+ *  names the store, links to ITS storefront, and mentions it so the post markets that
+ *  store too. (Instagram does not make links in captions clickable — the link is there to
+ *  copy; Facebook captions make it clickable — which is why the store hashtag/mention
+ *  are added as well: those ARE clickable on Instagram.) */
+export function buildCreditLine(business, link) {
+  if (!business) return ''
+  const mention = storeInstagramMention(business)
+  const name = business.name ?? 'this store'
+  return `📸 Featured store: ${name}${mention ? ' ' + mention : ''}\n🛍️ ${link}`
+}
+
 /** Picks a business to feature today, cycling through all active businesses so the same
  *  one isn't used two days running. Used for feature_highlight / problem_solution visuals
  *  and (once unlocked) store_spotlight. */
@@ -50,6 +79,7 @@ function categoryLabel(business, categoriesById) {
  *     voiceover?: string[],           // reel only
  *     images: string[],               // real product photos to use, when available
  *     link: string,                   // the featured store's storefront URL
+ *     creditLine: string,             // '📸 Featured store … 🛍️ link' (empty when no store photos used)
  *     business: {...} | null }        // the real business record behind this post, if any
  *
  * @param {Object} [opts]
@@ -120,13 +150,18 @@ export async function pickTodaysContent(opts = {}) {
     : { storeName: 'HerCommerce', ownerName: '', category: '', link }
 
   const caption = fillPlaceholders(template.caption, placeholderData)
+  // Whenever this store's own photos are used, credit it: name + its link + its hashtag.
+  const showCredit = business && images.length > 0
+  const creditLine = showCredit ? buildCreditLine(business, link) : ''
+  const extraTag = showCredit ? storeHashtag(business.name) : ''
   const result = {
     date: now.toISOString().slice(0, 10),
     dayName: now.toLocaleDateString('en-US', { weekday: 'long' }),
     format,
     theme,
     caption,
-    hashtags: template.hashtags,
+    hashtags: [template.hashtags, extraTag].filter(Boolean).join(' '),
+    creditLine,
     images,
     link,
     business,

@@ -28,7 +28,7 @@ async function graphPost(path, params) {
 }
 
 function captionWithHashtags(content) {
-  return `${content.caption}\n\n${content.hashtags ?? ''}`.trim()
+  return [content.caption, content.creditLine, content.hashtags].filter(Boolean).join('\n\n').trim()
 }
 
 /** Publishes a single-image Instagram feed post. `imageUrl` must be a public URL. */

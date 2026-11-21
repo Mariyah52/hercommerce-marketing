@@ -14,39 +14,13 @@ import { promisify } from 'node:util'
 import { mkdir, readdir, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { renderSlides } from '../carousel/render.mjs'
+import { buildVoiceover, sceneDurations } from './voice.mjs'
 
 const execFileAsync = promisify(execFile)
 
 const SCENE_SECONDS = 3.2 // how long each on-screen-text scene holds, before voiceover-driven trimming
 
-/** Runs edge-tts to synthesize one line of voiceover to an mp3. Free, no API key —
- *  Microsoft's public neural TTS. 'ur-PK-UzmaNeural' is the Urdu (Pakistan) female voice —
- *  Maria wants the reel voiceover to actually be spoken Urdu, not a Roman-Urdu-text-read-
- *  by-an-English-voice workaround.
- *
- *  IMPORTANT: this voice needs real Urdu/Nastaliq SCRIPT text (اردو), not Roman Urdu
- *  (Urdu spelled out in Latin letters, e.g. "Online business hai..."). Feeding it Roman
- *  Urdu is what made early reels sound garbled/like an unclear language — the voice tried
- *  to pronounce Latin letters using Urdu letter-by-letter rules. So captionBank.mjs's
- *  `voiceover` arrays are written in actual Urdu script; only the on-screen text
- *  (`onScreenText`, shown visually, not spoken) stays in Roman Urdu/English, since that's
- *  how HerCommerce's captions are normally written and read on screen. */
-async function synthesizeVoiceoverLine(text, outPath, voice = 'ur-PK-UzmaNeural') {
-  await execFileAsync('edge-tts', ['--voice', voice, '--text', text, '--write-media', outPath])
-}
-
-/** Concatenates several mp3 voiceover lines into one track with ffmpeg, returning its
- *  duration in seconds (used to size the video to match). */
-async function concatAudio(mp3Paths, outPath) {
-  const listFile = outPath + '.txt'
-  const { writeFile } = await import('node:fs/promises')
-  await writeFile(listFile, mp3Paths.map((p) => `file '${p}'`).join('\n'))
-  await execFileAsync('ffmpeg', ['-y', '-f', 'concat', '-safe', '0', '-i', listFile, '-c', 'copy', outPath])
-  const { stdout } = await execFileAsync('ffprobe', [
-    '-v', 'error', '-show_entries', 'format=duration', '-of', 'default=noprint_wrappers=1:nokey=1', outPath,
-  ])
-  return parseFloat(stdout.trim())
-}
+// Voiceover (Urdu + English voices, pauses, volume levelling, retries) lives in ./voice.mjs.
 
 /** Renders each on-screen-text line as a 1080x1920 scene PNG (reusing the carousel
  *  template's visual language at Reels' aspect ratio instead of the feed's 4:5). */
@@ -70,28 +44,26 @@ export async function buildReel(content, opts = {}) {
   const workDir = path.join(outDir, `_work-${content.date ?? Date.now()}`)
   await mkdir(workDir, { recursive: true })
 
-  // 1. Voiceover — one mp3 per line, concatenated.
+  // 1. Voiceover — Urdu parts by the Urdu voice, English parts (brand/store names) by an
+  //    English voice, joined with short pauses; see voice.mjs.
   const voiceoverLines = content.voiceover ?? []
-  const mp3Paths = []
-  for (let i = 0; i < voiceoverLines.length; i++) {
-    const p = path.join(workDir, `vo-${i + 1}.mp3`)
-    await synthesizeVoiceoverLine(voiceoverLines[i], p)
-    mp3Paths.push(p)
-  }
-  const voiceoverPath = path.join(workDir, 'voiceover.mp3')
-  const voiceoverDuration = mp3Paths.length ? await concatAudio(mp3Paths, voiceoverPath) : 0
+  const { path: voiceoverPath, duration: voiceoverDuration, lineDurations } = voiceoverLines.length
+    ? await buildVoiceover(voiceoverLines, workDir)
+    : { path: null, duration: 0, lineDurations: [] }
 
-  // 2. Scenes — on-screen text cards, timed to split the voiceover's total duration
-  //    evenly (falls back to SCENE_SECONDS each if there's no voiceover timing yet).
+  // 2. Scenes — on-screen text cards. When there are as many scenes as voiceover lines each
+  //    scene stays exactly as long as its line is spoken; otherwise the time is shared evenly.
   const scenes = content.onScreenText ?? []
   const scenePaths = await renderScenes(scenes, content.images ?? [], workDir)
-  const perSceneSeconds = voiceoverDuration > 0 ? voiceoverDuration / scenes.length : SCENE_SECONDS
+  const durations = voiceoverDuration > 0
+    ? sceneDurations(scenes.length, lineDurations, voiceoverDuration)
+    : scenes.map(() => SCENE_SECONDS)
 
-  // 3. Assemble: each scene PNG held for perSceneSeconds, concatenated into a silent
-  //    video track, then the voiceover (and optional ducked music) muxed in.
+  // 3. Assemble: each scene PNG held for its duration, concatenated into a silent video
+  //    track, then the voiceover (and optional ducked music) muxed in.
   const concatListPath = path.join(workDir, 'scenes.txt')
   const { writeFile } = await import('node:fs/promises')
-  await writeFile(concatListPath, scenePaths.map((p) => `file '${p}'\nduration ${perSceneSeconds}`).join('\n') + `\nfile '${scenePaths.at(-1)}'\n`)
+  await writeFile(concatListPath, scenePaths.map((p, i) => `file '${p}'\nduration ${durations[i].toFixed(3)}`).join('\n') + `\nfile '${scenePaths.at(-1)}'\n`)
 
   const silentVideoPath = path.join(workDir, 'silent.mp4')
   await execFileAsync('ffmpeg', [
@@ -101,20 +73,18 @@ export async function buildReel(content, opts = {}) {
 
   await mkdir(outDir, { recursive: true })
   const outPath = path.join(outDir, `reel-${content.date ?? 'draft'}.mp4`)
-  const audioInputs = []
-  if (voiceoverDuration > 0) audioInputs.push('-i', voiceoverPath)
-  if (opts.musicPath) audioInputs.push('-i', opts.musicPath)
-
-  if (audioInputs.length === 0) {
+  if (!voiceoverPath && !opts.musicPath) {
     await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-c', 'copy', outPath])
   } else if (!opts.musicPath) {
-    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-i', voiceoverPath, '-c:v', 'copy', '-c:a', 'aac', '-shortest', outPath])
+    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-i', voiceoverPath, '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-shortest', outPath])
+  } else if (!voiceoverPath) {
+    await execFileAsync('ffmpeg', ['-y', '-i', silentVideoPath, '-stream_loop', '-1', '-i', opts.musicPath, '-filter_complex', '[1:a]volume=0.4[aout]', '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-shortest', outPath])
   } else {
-    // Voiceover at full volume, music ducked under it (-15dB) and looped/trimmed to length.
+    // Voiceover at full volume, music ducked under it and looped/trimmed to length.
     await execFileAsync('ffmpeg', [
       '-y', '-i', silentVideoPath, '-i', voiceoverPath, '-stream_loop', '-1', '-i', opts.musicPath,
-      '-filter_complex', '[2:a]volume=0.18[music];[1:a][music]amix=inputs=2:duration=first[aout]',
-      '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-shortest', outPath,
+      '-filter_complex', '[2:a]volume=0.18[music];[1:a][music]amix=inputs=2:duration=first:dropout_transition=0:normalize=0[aout]',
+      '-map', '0:v', '-map', '[aout]', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-shortest', outPath,
     ])
   }
 

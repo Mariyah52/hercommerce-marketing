@@ -2,7 +2,7 @@
 // which caption-bank template (cycling so nothing repeats for weeks), and which real
 // store data fills the {{placeholders}}. This is the one place "today's content" gets
 // assembled into a single plain object that the carousel/reel/post modules consume.
-import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT, EXCLUDED_BUSINESS_NAMES } from '../config.mjs'
+import { ROTATION, STOREFRONT_BASE_URL, SPOTLIGHT_UNLOCK_STORE_COUNT, EXCLUDED_BUSINESS_NAMES, WHATSAPP_GROUP_URL, COLLAB_ENABLED } from '../config.mjs'
 import { CAPTION_BANK } from './captionBank.mjs'
 import { getActiveBusinesses, getCategories, getProductCountsByBusiness, getProductImages } from '../data/firestore.mjs'
 
@@ -122,7 +122,8 @@ export async function pickTodaysContent(opts = {}) {
     format = 'reel'
   }
 
-  const templates = CAPTION_BANK[theme]
+  // Templates that mention the WhatsApp group are only used once its link is set in config.
+  const templates = CAPTION_BANK[theme].filter((tpl) => WHATSAPP_GROUP_URL || !JSON.stringify(tpl).includes('{{groupLink}}'))
   const template = templates[week % templates.length]
 
   // Pick the featured business: manual override wins, otherwise cycle deterministically
@@ -146,8 +147,9 @@ export async function pickTodaysContent(opts = {}) {
         ownerName: business.ownerName ?? 'the owner',
         category: categoryLabel(business, categoriesById),
         link,
+        groupLink: WHATSAPP_GROUP_URL,
       }
-    : { storeName: 'HerCommerce', ownerName: '', category: '', link }
+    : { storeName: 'HerCommerce', ownerName: '', category: '', link, groupLink: WHATSAPP_GROUP_URL }
 
   const caption = fillPlaceholders(template.caption, placeholderData)
   // Whenever this store's own photos are used, credit it: name + its link + its hashtag.
@@ -162,6 +164,8 @@ export async function pickTodaysContent(opts = {}) {
     caption,
     hashtags: [template.hashtags, extraTag].filter(Boolean).join(' '),
     creditLine,
+    // Instagram handles (no @) to invite as collaborators on this post.
+    collaborators: showCredit && COLLAB_ENABLED ? [storeInstagramMention(business).replace(/^@/, '')].filter(Boolean) : [],
     images,
     link,
     business,

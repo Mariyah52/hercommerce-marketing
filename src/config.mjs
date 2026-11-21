@@ -37,3 +37,14 @@ export const SPOTLIGHT_UNLOCK_STORE_COUNT = 40
 // business that asked not to be included. Add a name here any time a store opts out;
 // no code change needed beyond this list. Checked in src/content/pick.mjs.
 export const EXCLUDED_BUSINESS_NAMES = ['HOMIQ']
+
+// Link of the HerCommerce WhatsApp community group (WhatsApp > group > Invite via link).
+// Leave empty until it exists: posts that say "join our WhatsApp group" are simply skipped
+// while this is empty. Can also be set from the workflow without a code change by adding
+// a repository variable/secret named WHATSAPP_GROUP_URL.
+export const WHATSAPP_GROUP_URL = process.env.WHATSAPP_GROUP_URL || ''
+
+// Invite the featured store's own Instagram account as a "collaborator" on the post (Instagram
+// Collab posts: the post then appears on both profiles, once the store accepts the invite).
+// Only happens when the store's profile has an Instagram handle and its photos are shown.
+export const COLLAB_ENABLED = true

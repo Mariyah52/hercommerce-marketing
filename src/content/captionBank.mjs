@@ -17,6 +17,18 @@ export const CAPTION_BANK = {
   tips: [
     {
       caption:
+        "Naye client ko apna sab kuch kaise dikhayein? 4 asaan steps. 🔗\n\n👉 Link in bio — apna store free mein banayein",
+      slides: [
+        'Naye client ko kaise bhejein? 🔗',
+        'Products HerCommerce par ek baar add karo 📦',
+        'Client ne pucha? Sirf apna store link bhejo',
+        'Photos aur prices wahan khud dekh lega',
+        'Order seedha aap tak — koi bar bar message nahi ✅',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption:
         "HerCommerce kya hai? Free online store, jahan aap products ek baar add karte hain aur sirf link share karte hain. Marketing mein bhi hum aapke saath hain. 💗\n\n👉 Link in bio",
       slides: [
         'HerCommerce kya hai? 💗',
@@ -81,6 +93,16 @@ export const CAPTION_BANK = {
 
   // ---- Tuesday: reel — problem / solution ----
   problem_solution: [
+    {
+      caption: 'Doosre sellers se milna chahte hain? Hamara WhatsApp group join karein. 💬\n\n{{groupLink}}',
+      onScreenText: ['Akeli seller feel ho rahi hai? 🥺', 'Hamara WhatsApp group join karo 💬', 'Tips, support, aur community 💗'],
+      voiceover: [
+        'Business akele chalana mushkil lagta hai?',
+        'Her Commerce ka WhatsApp group join karein, tips, support, aur doosre sellers se milna.',
+        'Link caption mein hai.',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
     // ---- "What is HerCommerce" messages (Nov 2026): Shopify cost / we market your products / add once, share link ----
     {
       caption: 'Online presence barhani hai, lekin Shopify jaisi dollar wali monthly fees nahi dena chahte? 💸 HerCommerce par apna store bilkul free banayein.\n\n👉 Link in bio',
@@ -146,6 +168,21 @@ export const CAPTION_BANK = {
 
   // ---- Wednesday: single post — quick tip / testimonial-style ----
   quick_tip: [
+    {
+      caption:
+        "Naye customer ne register kiya ya pooch liya? Saare products WhatsApp par bhejne ki zaroorat nahi. Bas apne HerCommerce store ka link bhej dein, wo sab kuch khud dekh lega. 🔗\n\n👉 Apna free store banayein — link in bio",
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption:
+        "\"Price kya hai?\" — har baar photo na bhejein. Ek link bhejein, products aur prices sab wahan hain. 💬➡️🔗\n\n👉 Link in bio",
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption:
+        "Apna store link kahan lagayein? Instagram bio, WhatsApp status, packaging, visiting card. Ek link, poora catalog. 🔗✨\n\n👉 Link in bio",
+      hashtags: HASHTAGS_CORE,
+    },
     {
       caption:
         "Chhota tip, bara farq: apne store ka description short aur clear rakho. Customer 3 second mein samajh jaye aap kya bechti hain. ✨\n\n👉 Link in bio",
@@ -249,6 +286,16 @@ export const CAPTION_BANK = {
 
   // ---- Saturday: single post — community engagement ----
   community: [
+    {
+      caption:
+        "Hamara HerCommerce WhatsApp group join karein: tips, support aur doosre sellers se milna. 💬💗\n\nJoin karne ka link: {{groupLink}}",
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption:
+        "Naye brands HerCommerce par aa rahe hain — swagat! 🎉 Aapka store bhi hai? Comments mein apna Instagram handle likhein, hum aapke saath collab post karenge. 🤝👇",
+      hashtags: HASHTAGS_CORE,
+    },
     {
       caption:
         "Aapka store kis cheez ke liye mashhoor hai? Comments mein batayein — best answer ko agle hafte feature karenge! 👇💗",

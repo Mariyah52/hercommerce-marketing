@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "HerCommerce Automation Bot — daily content engine + poster for Instagram, Facebook and TikTok",
+  "description": "HerCommerce Automation Bot \u2014 daily content engine + poster for Instagram, Facebook and TikTok",
   "scripts": {
-    "run": "node src/index.mjs"
+    "run": "node src/index.mjs",
+    "test": "node --test tests/voice.test.mjs"
   },
   "dependencies": {
     "firebase": "^11.0.0",

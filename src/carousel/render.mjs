@@ -11,12 +11,14 @@ import { fileURLToPath } from 'node:url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const TEMPLATE_PATH = path.join(__dirname, 'template.html')
 
-// Two alternating brand gradients — warm pink → deep purple, HerCommerce's established
-// women-empowerment palette (same family used across the storefront UI).
+// Soft, light pastel brand gradients (the old hot-pink -> deep-purple look came out too
+// dark, especially with the black overlay on top). Text on these is deep plum for easy
+// reading. Slides that show a store's product photo keep white text over a gentle overlay.
 const GRADIENTS = [
-  'linear-gradient(135deg, #ff6fa5 0%, #8b3a9e 100%)',
-  'linear-gradient(135deg, #a63bb0 0%, #4a1e7c 100%)',
+  'linear-gradient(135deg, #ffe3ee 0%, #ffb9d5 100%)',
+  'linear-gradient(135deg, #f7dcf7 0%, #e0b8f2 100%)',
 ]
+const PLUM = '#5a1a4a'
 
 function buildSlideHtml(template, { text, index, total, imageUrl, centered, width, height }) {
   const dots = Array.from({ length: total }, (_, i) => `<div class="pdot${i === index ? ' active' : ''}"></div>`).join('')
@@ -25,8 +27,12 @@ function buildSlideHtml(template, { text, index, total, imageUrl, centered, widt
     .replaceAll('{{WIDTH}}', String(width))
     .replaceAll('{{HEIGHT}}', String(height))
     .replaceAll('{{BACKGROUND}}', GRADIENTS[index % GRADIENTS.length])
+    .replaceAll('{{FG}}', imageUrl ? '#ffffff' : PLUM)
+    .replaceAll('{{FG_DIM}}', imageUrl ? 'rgba(255,255,255,0.55)' : 'rgba(90,26,74,0.3)')
+    .replaceAll('{{SCRIM}}', imageUrl ? 'linear-gradient(180deg, rgba(0,0,0,0.08) 0%, rgba(0,0,0,0.42) 100%)' : 'transparent')
+    .replaceAll('{{TEXT_SHADOW}}', imageUrl ? '0 2px 18px rgba(0,0,0,0.4)' : 'none')
     .replaceAll('{{BG_IMAGE_CSS}}', imageUrl ? `url('${imageUrl}')` : 'none')
-    .replaceAll('{{BG_IMAGE_OPACITY}}', imageUrl ? '0.55' : '0')
+    .replaceAll('{{BG_IMAGE_OPACITY}}', imageUrl ? '0.9' : '0')
     .replaceAll('{{FONT_SIZE}}', String(fontSize))
     .replaceAll('{{ALIGN_CLASS}}', centered ? 'center' : '')
     .replaceAll('{{CTA_DISPLAY}}', index === total - 1 ? 'block' : 'none')

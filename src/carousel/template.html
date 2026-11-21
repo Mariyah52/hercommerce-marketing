@@ -9,7 +9,9 @@
     font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
     background: {{BACKGROUND}};
     position: relative;
-    color: #ffffff;
+    --fg: {{FG}};
+    --fg-dim: {{FG_DIM}};
+    color: var(--fg);
   }
   .bg-photo {
     position: absolute; inset: 0;
@@ -20,14 +22,14 @@
   }
   .scrim {
     position: absolute; inset: 0;
-    background: linear-gradient(180deg, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.55) 100%);
+    background: {{SCRIM}};
   }
   .brand {
     position: absolute; top: 64px; left: 64px;
     font-size: 34px; font-weight: 700; letter-spacing: 0.5px;
     display: flex; align-items: center; gap: 14px;
   }
-  .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: #ffffff; }
+  .brand .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--fg); }
   .content {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -42,7 +44,7 @@
     font-size: {{FONT_SIZE}}px;
     font-weight: 700;
     line-height: 1.32;
-    text-shadow: 0 2px 18px rgba(0,0,0,0.35);
+    text-shadow: {{TEXT_SHADOW}};
     max-width: 920px;
     white-space: pre-wrap;
   }
@@ -51,8 +53,8 @@
     display: flex; flex-direction: column; align-items: center; gap: 26px;
   }
   .dots { display: flex; gap: 12px; }
-  .pdot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,0.4); }
-  .pdot.active { background: #ffffff; width: 34px; border-radius: 8px; }
+  .pdot { width: 14px; height: 14px; border-radius: 50%; background: var(--fg-dim); }
+  .pdot.active { background: var(--fg); width: 34px; border-radius: 8px; }
   .cta {
     font-size: 30px; font-weight: 600; opacity: 0.95;
     display: {{CTA_DISPLAY}};

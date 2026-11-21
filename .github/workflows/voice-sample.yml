@@ -4,8 +4,6 @@ name: Neerja voice samples
 # for the brand name) so you can listen and pick the clearest one.
 # Runs on every push to the fix-urdu-voice branch and can also be started by hand.
 on:
-  push:
-    branches: [fix-urdu-voice]
   workflow_dispatch:
 
 jobs:

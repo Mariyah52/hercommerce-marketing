@@ -58,3 +58,31 @@ test('buildVoiceover: right voice per part, pauses, retry on failure, tail silen
   assert.ok(!calls.some((c) => c.voice === 'ur-PK-UzmaNeural' && /[A-Za-z]/.test(c.text)), 'Urdu voice never receives Latin letters')
   await rm(work, { recursive: true, force: true })
 })
+
+const { CAPTION_BANK } = await import('../src/content/captionBank.mjs')
+const { storeHashtag, storeInstagramMention, buildCreditLine } = await import('../src/content/pick.mjs')
+
+test('every reel voiceover line is Roman Urdu/English only (Neerja cannot read Urdu script)', () => {
+  let count = 0
+  for (const templates of Object.values(CAPTION_BANK)) {
+    for (const t of templates) {
+      for (const line of t.voiceover ?? []) {
+        count++
+        assert.ok(!/[؀-ۿ]/.test(line), `Urdu script found in: ${line}`)
+        assert.ok(!/Her-Commerce|HerCommerce/.test(line), `brand must be written "Her Commerce": ${line}`)
+      }
+    }
+  }
+  assert.ok(count >= 30)
+})
+
+test('store hashtag, Instagram mention and credit line', () => {
+  assert.equal(storeHashtag('Rose Boutique'), '#RoseBoutique')
+  assert.equal(storeHashtag('عائشہ اسٹور'), '')
+  assert.equal(storeInstagramMention({ instagram: 'https://www.instagram.com/rose.boutique/?hl=en' }), '@rose.boutique')
+  assert.equal(storeInstagramMention({ instagramHandle: '@rose_b' }), '@rose_b')
+  assert.equal(storeInstagramMention({}), '')
+  const line = buildCreditLine({ name: 'Rose Boutique', instagram: 'rose_b' }, 'https://hercommerce-299ba.web.app/store/rose')
+  assert.ok(line.includes('Rose Boutique') && line.includes('@rose_b') && line.includes('/store/rose'))
+  assert.equal(buildCreditLine(null, 'x'), '')
+})

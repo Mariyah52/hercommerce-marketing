@@ -1,4 +1,4 @@
-name: Urdu voice samples
+name: Neerja voice samples
 
 # Makes the same Urdu sentence with every available Urdu voice (and the English voice used
 # for the brand name) so you can listen and pick the clearest one.
@@ -14,21 +14,29 @@ jobs:
     steps:
       - name: Install edge-tts
         run: pip install --break-system-packages edge-tts
-      - name: List Urdu voices
-        run: edge-tts --list-voices | grep -i "ur-" | tee voices.txt
-      - name: Make samples
+      - name: List English-India voices
+        run: edge-tts --list-voices | grep -i "en-IN" | tee voices.txt
+      - name: Make Neerja samples
         run: |
           mkdir -p samples
-          printf '%s' 'آن لائن بزنس ہے، لیکن سیلز نہیں آ رہیں؟ اپنا اسٹور بالکل فری میں بنائیں۔' > ur.txt
-          printf '%s' 'Her Commerce' > en.txt
-          for v in ur-PK-UzmaNeural ur-PK-AsadNeural ur-IN-GulNeural ur-IN-SalmanNeural; do
-            edge-tts --voice "$v" --file ur.txt --write-media "samples/$v.mp3" || echo "FAILED $v"
-          done
-          edge-tts --voice en-IN-NeerjaNeural --file en.txt --write-media samples/en-IN-NeerjaNeural-HerCommerce.mp3 || echo "FAILED en"
+          printf '%s' 'Online business hai, lekin sales nahi aa rahi? Her Commerce se apna business aasani se manage karein. Products dikhayein, customers tak pahunchein, aur aage badhein.' > roman1.txt
+          printf '%s' 'Orders bikhre hue hain? Ab sab kuch ek jagah. Her Commerce pe apna store bilkul free banayein, aur aaj hi bechna shuru karein.' > roman2.txt
+          printf '%s' 'Aapka business, aapki mehnat, aapki pehchaan. Her Commerce aapke saath hai, poora saal free.' > roman3.txt
+          printf '%s' 'آن لائن بزنس ہے، لیکن سیلز نہیں آ رہیں؟ ہر کامرس سے اپنا بزنس آسانی سے منیج کریں۔' > urdu.txt
+          mk() { edge-tts "$@" || echo "FAILED $*"; }
+          mk --voice en-IN-NeerjaNeural --file roman1.txt --write-media samples/1_neerja_roman_online-business.mp3
+          mk --voice en-IN-NeerjaNeural --file roman2.txt --write-media samples/2_neerja_roman_orders.mp3
+          mk --voice en-IN-NeerjaNeural --file roman3.txt --write-media samples/3_neerja_roman_your-business.mp3
+          mk --voice en-IN-NeerjaNeural --rate=-10% --file roman1.txt --write-media samples/4_neerja_roman_slower.mp3
+          mk --voice en-IN-NeerjaNeural --rate=+8% --file roman1.txt --write-media samples/5_neerja_roman_faster.mp3
+          mk --voice en-IN-NeerjaExpressiveNeural --file roman1.txt --write-media samples/6_neerja-expressive_roman.mp3
+          mk --voice en-IN-NeerjaExpressiveNeural --file roman2.txt --write-media samples/7_neerja-expressive_roman_orders.mp3
+          mk --voice en-IN-NeerjaNeural --file urdu.txt --write-media samples/8_neerja_urdu-script.mp3
+          mk --voice en-IN-NeerjaExpressiveNeural --file urdu.txt --write-media samples/9_neerja-expressive_urdu-script.mp3
           ls -la samples
       - uses: actions/upload-artifact@v4
         with:
-          name: voice-samples
+          name: neerja-samples
           path: |
             samples/
             voices.txt

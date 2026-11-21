@@ -17,6 +17,19 @@ export const CAPTION_BANK = {
   tips: [
     {
       caption:
+        "HerCommerce kya hai? Free online store, jahan aap products ek baar add karte hain aur sirf link share karte hain. Marketing mein bhi hum aapke saath hain. 💗\n\n👉 Link in bio",
+      slides: [
+        'HerCommerce kya hai? 💗',
+        'Free online store — Shopify jaisi dollar wali monthly fees nahi 💸',
+        'Products sirf ek baar add karo 📦',
+        'WhatsApp par baar baar photos nahi, sirf apna link bhejo 🔗',
+        'Hum aapke store ki marketing bhi karte hain 📣',
+        'Aaj hi free store banao — link in bio',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption:
         "Apna online business shuru karna itna mushkil nahi jitna lagta hai. 💗\n\nYeh 5 steps follow karo aur aaj hi apna digital store live kar do — bilkul free.\n\n👉 Link in bio",
       slides: [
         'Apna online business 5 steps mein shuru karo 💗',
@@ -68,6 +81,37 @@ export const CAPTION_BANK = {
 
   // ---- Tuesday: reel — problem / solution ----
   problem_solution: [
+    // ---- "What is HerCommerce" messages (Nov 2026): Shopify cost / we market your products / add once, share link ----
+    {
+      caption: 'Online presence barhani hai, lekin Shopify jaisi dollar wali monthly fees nahi dena chahte? 💸 HerCommerce par apna store bilkul free banayein.\n\n👉 Link in bio',
+      onScreenText: ['Online presence barhani hai?', 'Shopify ki monthly fees dollars mein 💸', 'HerCommerce pe store bilkul free 💗'],
+      voiceover: [
+        'Apni online presence barhana chahte hain, lekin Shopify ki monthly fees dollars mein hoti hai?',
+        'Her Commerce par aapka store bilkul free hai.',
+        'Aaj hi apna store banayein aur bechna shuru karein.',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'Aap sirf products add karein, marketing hum karte hain. 📣 HerCommerce aapke store ko apne pages par feature karta hai.\n\n👉 Link in bio',
+      onScreenText: ['Products aap add karo 📦', 'Marketing hum karte hain 📣', 'HerCommerce pe apna store banao 💗'],
+      voiceover: [
+        'Aap sirf apne products add karein.',
+        'Her Commerce aapke store ko apne Instagram aur Facebook par feature karta hai.',
+        'Aap bechein, marketing hum sambhalte hain.',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
+    {
+      caption: 'Har customer ko WhatsApp par baar baar photos aur prices bhejna band karein. 📲 Products ek baar add karein, phir sirf apna link share karein.\n\n👉 Link in bio',
+      onScreenText: ['Baar baar photos bhejna? 😩', 'Products sirf ek baar add karo', 'Phir sirf apna link bhejo 🔗'],
+      voiceover: [
+        'Har customer ko WhatsApp par baar baar photos aur prices bhejte hain?',
+        'Her Commerce par products sirf ek baar add karein.',
+        'Phir sirf apna store link bhejein, baaki sab customer khud dekh lega.',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
     {
       caption: 'Online business hai... but sales nahi aa rahi? Her-Commerce try karo. 💗\n\n👉 Link in bio',
       onScreenText: ['Online business hai...', 'but sales nahi aa rahi? 😩', 'Her-Commerce try karo 💗', 'Your business, your growth.'],
@@ -166,6 +210,17 @@ export const CAPTION_BANK = {
 
   // ---- Friday: reel — feature highlight / store spotlight ----
   feature_highlight: [
+    {
+      caption: 'HerCommerce kya hai? 3 baatein jo aapko jaanni chahiye. 💗\n\n👉 Link in bio',
+      onScreenText: ['HerCommerce kya hai? 💗', '1. Free online store, dollar wali fees nahi', '2. Aapke products ki marketing hum karte hain', '3. Products ek baar add karo, sirf link bhejo'],
+      voiceover: [
+        'Her Commerce kya hai? Teen baatein.',
+        'Pehli, aapka online store bilkul free hai, Shopify jaisi dollar wali fees nahi.',
+        'Doosri, aapke products ki marketing hum karte hain.',
+        'Teesri, products sirf ek baar add karein, phir WhatsApp par sirf link bhejein.',
+      ],
+      hashtags: HASHTAGS_CORE,
+    },
     {
       caption: 'Products showcase karo, customers tak pohoncho, aur grow karo. 📈\n\n👉 Link in bio',
       onScreenText: ['New Order! 🎉', 'A customer just placed an order', 'Her-Commerce — your business, your growth'],

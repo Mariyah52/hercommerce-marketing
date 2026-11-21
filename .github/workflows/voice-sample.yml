@@ -1,0 +1,34 @@
+name: Urdu voice samples
+
+# Makes the same Urdu sentence with every available Urdu voice (and the English voice used
+# for the brand name) so you can listen and pick the clearest one.
+# Runs on every push to the fix-urdu-voice branch and can also be started by hand.
+on:
+  push:
+    branches: [fix-urdu-voice]
+  workflow_dispatch:
+
+jobs:
+  samples:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install edge-tts
+        run: pip install --break-system-packages edge-tts
+      - name: List Urdu voices
+        run: edge-tts --list-voices | grep -i "ur-" | tee voices.txt
+      - name: Make samples
+        run: |
+          mkdir -p samples
+          printf '%s' 'آن لائن بزنس ہے، لیکن سیلز نہیں آ رہیں؟ اپنا اسٹور بالکل فری میں بنائیں۔' > ur.txt
+          printf '%s' 'Her Commerce' > en.txt
+          for v in ur-PK-UzmaNeural ur-PK-AsadNeural ur-IN-GulNeural ur-IN-SalmanNeural; do
+            edge-tts --voice "$v" --file ur.txt --write-media "samples/$v.mp3" || echo "FAILED $v"
+          done
+          edge-tts --voice en-IN-NeerjaNeural --file en.txt --write-media samples/en-IN-NeerjaNeural-HerCommerce.mp3 || echo "FAILED en"
+          ls -la samples
+      - uses: actions/upload-artifact@v4
+        with:
+          name: voice-samples
+          path: |
+            samples/
+            voices.txt

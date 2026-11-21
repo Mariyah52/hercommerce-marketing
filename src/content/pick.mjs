@@ -136,7 +136,11 @@ export async function pickTodaysContent(opts = {}) {
     const ranked = [...businesses].sort((a, b) => (productCounts.get(b.id) ?? 0) - (productCounts.get(a.id) ?? 0))
     business = pickBusiness(ranked.slice(0, 5), week)
   } else if (businesses.length > 0) {
-    business = pickBusiness(businesses, week + dayOfWeek)
+    // Every other post features a store that has a valid Instagram handle, so those stores
+    // get a collab invite regularly; the remaining posts cycle through all stores.
+    const withHandle = businesses.filter((b) => storeInstagramMention(b))
+    const offset = week + dayOfWeek
+    business = withHandle.length > 0 && offset % 2 === 0 ? pickBusiness(withHandle, Math.floor(offset / 2)) : pickBusiness(businesses, offset)
   }
 
   const images = business ? await getProductImages(business.id, 5) : []

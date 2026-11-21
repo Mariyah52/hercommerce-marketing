@@ -16,4 +16,4 @@ jobs:
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: Voiceover tests (no internet or API keys needed)
-        run: node --test tests/voice.test.mjs
+        run: node --test tests/voice.test.mjs tests/pick.test.mjs
